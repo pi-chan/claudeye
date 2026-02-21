@@ -20,6 +20,7 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_decorations(false)
             .with_always_on_top()
+            .with_mouse_passthrough(true)
             .with_inner_size([WINDOW_WIDTH, WINDOW_EMPTY_HEIGHT])
             .with_position([20.0, 20.0])
             .with_transparent(true),
@@ -41,6 +42,7 @@ impl eframe::App for CcMonitorApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         ctx.request_repaint_after(std::time::Duration::from_secs(REPAINT_INTERVAL_SECS));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
+        ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
 
         let sessions = match self.sessions.lock() {
             Ok(guard) => guard.clone(),
@@ -68,16 +70,7 @@ impl eframe::App for CcMonitorApp {
                     );
                 } else {
                     for session in &sessions {
-                        let row_resp = ui.add(
-                            egui::Label::new(format_session_line(session))
-                                .sense(egui::Sense::click()),
-                        );
-                        if row_resp.clicked() {
-                            tmux::switch_to_pane(&session.pane.id);
-                        }
-                        if row_resp.hovered() {
-                            ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
-                        }
+                        ui.label(format_session_line(session));
                     }
                 }
             });

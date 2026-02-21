@@ -64,12 +64,6 @@ pub fn parse_pane_line(line: &str) -> Option<PaneInfo> {
 }
 
 
-pub fn switch_to_pane(pane_id: &str) {
-    let _ = Command::new("tmux")
-        .args(["switch-client", "-t", pane_id])
-        .output();
-}
-
 pub fn capture_pane(pane_id: &str) -> String {
     let output = Command::new("tmux")
         .args(["capture-pane", "-p", "-t", pane_id])

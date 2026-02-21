@@ -1,0 +1,15 @@
+[package]
+name = "ccmonitor"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "ccmonitor"
+path = "src/main.rs"
+
+[dependencies]
+eframe = "0.30"
+egui = "0.30"
+regex = "1"
+
+[dev-dependencies]

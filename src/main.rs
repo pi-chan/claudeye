@@ -9,10 +9,8 @@ use std::sync::{Arc, Mutex};
 
 const REPAINT_INTERVAL_SECS: u64 = 2;
 const WINDOW_WIDTH: f32 = 280.0;
-const WINDOW_INITIAL_HEIGHT: f32 = 120.0;
 const WINDOW_EMPTY_HEIGHT: f32 = 80.0;
 const ROW_HEIGHT: f32 = 50.0;
-const WINDOW_HEADER_HEIGHT: f32 = 30.0;
 
 fn main() -> eframe::Result<()> {
     let sessions: Arc<Mutex<Vec<ClaudeSession>>> = Arc::new(Mutex::new(vec![]));
@@ -22,7 +20,7 @@ fn main() -> eframe::Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_decorations(false)
             .with_always_on_top()
-            .with_inner_size([WINDOW_WIDTH, WINDOW_INITIAL_HEIGHT])
+            .with_inner_size([WINDOW_WIDTH, WINDOW_EMPTY_HEIGHT])
             .with_position([20.0, 20.0])
             .with_transparent(true),
         ..Default::default()
@@ -51,7 +49,7 @@ impl eframe::App for CcMonitorApp {
         let window_height = if sessions.is_empty() {
             WINDOW_EMPTY_HEIGHT
         } else {
-            sessions.len() as f32 * ROW_HEIGHT + WINDOW_HEADER_HEIGHT
+            sessions.len() as f32 * ROW_HEIGHT
         };
 
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(
@@ -62,20 +60,6 @@ impl eframe::App for CcMonitorApp {
         egui::CentralPanel::default()
             .frame(egui::Frame::none().fill(Color32::from_rgba_unmultiplied(20, 20, 20, 60)))
             .show(ctx, |ui| {
-                let title_response = ui.add(
-                    egui::Label::new(
-                        RichText::new("● Claude Code Monitor")
-                            .color(Color32::from_gray(180))
-                            .size(11.0),
-                    )
-                    .sense(egui::Sense::click_and_drag()),
-                );
-                if title_response.dragged() {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::StartDrag);
-                }
-
-                ui.separator();
-
                 if sessions.is_empty() {
                     ui.label(
                         RichText::new("No Claude sessions found")

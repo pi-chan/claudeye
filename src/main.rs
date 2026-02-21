@@ -46,7 +46,7 @@ fn main() -> eframe::Result<()> {
     };
 
     eframe::run_native(
-        "ccmonitor",
+        "claudeye",
         options,
         Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false, opacity: args.opacity }))),
     )

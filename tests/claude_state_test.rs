@@ -1,4 +1,4 @@
-use ccmonitor::claude_state::{detect_state, ClaudeState};
+use claudeye::claude_state::{detect_state, ClaudeState};
 
 // Ported from tcmux status_claude_test.go
 

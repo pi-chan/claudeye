@@ -1,10 +1,10 @@
-# ccmonitor
+# claudeye
 
 A transparent always-on-top overlay that monitors Claude Code sessions running in tmux panes.
 
 ## What it does
 
-ccmonitor periodically polls all tmux panes, finds those running the `claude` command, and displays their status in a small floating window at the top center of your screen. The window is click-through, so it never interferes with your workflow.
+claudeye periodically polls all tmux panes, finds those running the `claude` command, and displays their status in a small floating window at the top center of your screen. The window is click-through, so it never interferes with your workflow.
 
 Each session is shown with a colored indicator:
 
@@ -18,21 +18,21 @@ Each session is shown with a colored indicator:
 
 ## Requirements
 
-- **tmux** — must be installed and running. ccmonitor uses `tmux list-panes` and `tmux capture-pane` to discover and read Claude sessions.
-- **Claude Code** (`claude` CLI) — sessions must be running inside tmux panes. ccmonitor identifies panes where the current command is `claude`.
+- **tmux** — must be installed and running. claudeye uses `tmux list-panes` and `tmux capture-pane` to discover and read Claude sessions.
+- **Claude Code** (`claude` CLI) — sessions must be running inside tmux panes. claudeye identifies panes where the current command is `claude`.
 - **Rust toolchain** — install via [rustup](https://rustup.rs/)
 - **Linux with X11** — tested on X11; Wayland is untested. Standard X11 libraries are required (typically pre-installed).
 
 ## Installation
 
 ```sh
-cargo install ccmonitor
+cargo install claudeye
 ```
 
 ## Usage
 
 ```sh
-ccmonitor [--opacity <VALUE>]
+claudeye [--opacity <VALUE>]
 ```
 
 ### Options
@@ -45,13 +45,13 @@ ccmonitor [--opacity <VALUE>]
 
 ```sh
 # Run with default opacity
-ccmonitor
+claudeye
 
 # Run with a more visible background
-ccmonitor --opacity 0.6
+claudeye --opacity 0.6
 
 # Run fully transparent background (text only)
-ccmonitor --opacity 0.0
+claudeye --opacity 0.0
 ```
 
 ## How it works

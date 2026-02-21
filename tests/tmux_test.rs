@@ -1,4 +1,4 @@
-use ccmonitor::tmux::parse_pane_line;
+use claudeye::tmux::parse_pane_line;
 
 #[test]
 fn parse_valid_pane_line_claude() {
@@ -35,9 +35,9 @@ fn parse_pane_line_invalid_pid_returns_none() {
 
 #[test]
 fn project_name_is_basename_of_cwd() {
-    let line = "work:2.3 54321 /home/maedana/tmp/ccmonitor claude";
+    let line = "work:2.3 54321 /home/maedana/tmp/claudeye claude";
     let result = parse_pane_line(line);
     assert!(result.is_some());
     let pane = result.unwrap();
-    assert_eq!(pane.project_name, "ccmonitor");
+    assert_eq!(pane.project_name, "claudeye");
 }

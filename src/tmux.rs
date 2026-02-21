@@ -29,7 +29,7 @@ pub fn list_claude_panes() -> Vec<PaneInfo> {
                 .collect()
         }
         Err(e) => {
-            eprintln!("[ccmonitor] tmux list-panes failed: {e}");
+            eprintln!("[claudeye] tmux list-panes failed: {e}");
             vec![]
         }
     }
@@ -72,7 +72,7 @@ pub fn capture_pane(pane_id: &str) -> String {
     match output {
         Ok(out) => String::from_utf8_lossy(&out.stdout).into_owned(),
         Err(e) => {
-            eprintln!("[ccmonitor] tmux capture-pane failed for {pane_id}: {e}");
+            eprintln!("[claudeye] tmux capture-pane failed for {pane_id}: {e}");
             String::new()
         }
     }

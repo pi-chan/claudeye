@@ -3,10 +3,8 @@ use std::process::Command;
 #[derive(Debug, Clone)]
 pub struct PaneInfo {
     pub id: String,
-    /// pane のプロセスID（将来の拡張用・テストで利用）
     #[allow(dead_code)]
     pub pid: u32,
-    /// pane のカレントディレクトリ（project_name 算出に使用・テストで利用）
     #[allow(dead_code)]
     pub cwd: String,
     pub project_name: String,
@@ -72,7 +70,6 @@ pub fn switch_to_pane(pane_id: &str) {
         .output();
 }
 
-/// 指定した pane の画面内容を取得する（tmux capture-pane -p）。
 pub fn capture_pane(pane_id: &str) -> String {
     let output = Command::new("tmux")
         .args(["capture-pane", "-p", "-t", pane_id])

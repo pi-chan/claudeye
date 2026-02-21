@@ -1,10 +1,6 @@
 use ccmonitor::claude_state::{detect_state, ClaudeState};
 
-// --- tcmux status_claude_test.go からの移植 ---
-// StateRunning → ClaudeState::Working
-// StateWaiting → ClaudeState::WaitingForApproval
-// StateIdle    → ClaudeState::Idle
-// StateUnknown → ClaudeState::Idle（Unknown は使わない）
+// Ported from tcmux status_claude_test.go
 
 #[test]
 fn idle_with_prompt_only() {

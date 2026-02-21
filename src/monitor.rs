@@ -2,7 +2,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-/// ポーリング間隔（秒）
 const POLL_INTERVAL_SECS: u64 = 2;
 
 use crate::claude_state::{detect_state, ClaudeState};

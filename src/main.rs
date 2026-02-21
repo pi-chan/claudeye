@@ -27,8 +27,9 @@ fn parse_opacity(s: &str) -> Result<f32, String> {
 
 const REPAINT_INTERVAL_SECS: u64 = 2;
 const WINDOW_WIDTH: f32 = 280.0;
-const WINDOW_EMPTY_HEIGHT: f32 = 80.0;
-const ROW_HEIGHT: f32 = 50.0;
+const WINDOW_EMPTY_HEIGHT: f32 = 40.0;
+const ROW_HEIGHT: f32 = 20.0;
+const WINDOW_PADDING: f32 = 8.0;
 
 fn main() -> eframe::Result<()> {
     let args = Args::parse();
@@ -81,7 +82,7 @@ impl eframe::App for CcMonitorApp {
         let window_height = if sessions.is_empty() {
             WINDOW_EMPTY_HEIGHT
         } else {
-            sessions.len() as f32 * ROW_HEIGHT
+            sessions.len() as f32 * ROW_HEIGHT + WINDOW_PADDING * 2.0
         };
 
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(
@@ -90,7 +91,11 @@ impl eframe::App for CcMonitorApp {
         )));
 
         egui::CentralPanel::default()
-            .frame(egui::Frame::none().fill(Color32::from_rgba_unmultiplied(20, 20, 20, (self.opacity * 255.0) as u8)))
+            .frame(
+                egui::Frame::none()
+                    .fill(Color32::from_rgba_unmultiplied(20, 20, 20, (self.opacity * 255.0) as u8))
+                    .inner_margin(egui::Margin::symmetric(8.0, WINDOW_PADDING)),
+            )
             .show(ctx, |ui| {
                 if sessions.is_empty() {
                     ui.label(

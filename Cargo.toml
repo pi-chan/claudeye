@@ -8,6 +8,7 @@ name = "ccmonitor"
 path = "src/main.rs"
 
 [dependencies]
+clap = { version = "4.5.60", features = ["derive"] }
 eframe = "0.30"
 egui = "0.30"
 regex = "1"

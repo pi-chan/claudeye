@@ -22,7 +22,6 @@ fn main() -> eframe::Result<()> {
             .with_always_on_top()
             .with_mouse_passthrough(true)
             .with_inner_size([WINDOW_WIDTH, WINDOW_EMPTY_HEIGHT])
-            .with_position([20.0, 20.0])
             .with_transparent(true),
         ..Default::default()
     };
@@ -30,12 +29,15 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "ccmonitor",
         options,
-        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions }))),
+        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false }))),
     )
 }
 
+const WINDOW_TOP_MARGIN: f32 = 20.0;
+
 struct CcMonitorApp {
     sessions: Arc<Mutex<Vec<ClaudeSession>>>,
+    positioned: bool,
 }
 
 impl eframe::App for CcMonitorApp {
@@ -43,6 +45,14 @@ impl eframe::App for CcMonitorApp {
         ctx.request_repaint_after(std::time::Duration::from_secs(REPAINT_INTERVAL_SECS));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
         ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
+
+        if !self.positioned {
+            if let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size) {
+                let x = (monitor_size.x - WINDOW_WIDTH) / 2.0;
+                ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(x, WINDOW_TOP_MARGIN)));
+                self.positioned = true;
+            }
+        }
 
         let sessions = match self.sessions.lock() {
             Ok(guard) => guard.clone(),

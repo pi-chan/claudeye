@@ -4,7 +4,7 @@ mod picker;
 mod tmux;
 
 use clap::{Parser, Subcommand};
-use eframe::egui::{self, Color32, RichText, Vec2};
+use eframe::egui::{self, Color32, RichText, Ui, Vec2};
 use monitor::{ClaudeSession, start_polling};
 use claude_state::ClaudeState;
 use std::sync::{Arc, Mutex};
@@ -36,7 +36,7 @@ fn parse_opacity(s: &str) -> Result<f32, String> {
 }
 
 const REPAINT_INTERVAL_SECS: u64 = 2;
-const WINDOW_WIDTH: f32 = 280.0;
+const WINDOW_WIDTH: f32 = 300.0;
 const WINDOW_EMPTY_HEIGHT: f32 = 40.0;
 const ROW_HEIGHT: f32 = 20.0;
 const WINDOW_PADDING: f32 = 8.0;
@@ -81,7 +81,6 @@ struct CcMonitorApp {
 
 impl eframe::App for CcMonitorApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        ctx.request_repaint_after(std::time::Duration::from_secs(REPAINT_INTERVAL_SECS));
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
         ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
 
@@ -97,6 +96,19 @@ impl eframe::App for CcMonitorApp {
             Ok(guard) => guard.clone(),
             Err(_) => return, // poisoned mutex: polling thread panicked
         };
+
+        let has_working = sessions.iter().any(|s| matches!(
+            s.state,
+            ClaudeState::Working | ClaudeState::WaitingForApproval | ClaudeState::WaitingForAnswer
+        ));
+        if has_working {
+            ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        } else {
+            ctx.request_repaint_after(std::time::Duration::from_secs(REPAINT_INTERVAL_SECS));
+        }
+
+        let time = ctx.input(|i| i.time);
+
         let window_height = if sessions.is_empty() {
             WINDOW_EMPTY_HEIGHT
         } else {
@@ -123,26 +135,62 @@ impl eframe::App for CcMonitorApp {
                     );
                 } else {
                     for session in &sessions {
-                        ui.label(format_session_line(session));
+                        render_session_row(ui, session, time);
                     }
                 }
             });
     }
 }
 
-fn format_session_line(session: &ClaudeSession) -> RichText {
-    let (indicator, color, label) = match &session.state {
-        ClaudeState::Working => ("●", Color32::from_rgb(80, 200, 80), "WORKING"),
-        ClaudeState::WaitingForApproval => ("●", Color32::from_rgb(220, 180, 0), "APPROVAL"),
-        ClaudeState::WaitingForAnswer => ("●", Color32::from_rgb(80, 150, 220), "ANSWER"),
-        ClaudeState::Idle => ("○", Color32::from_gray(160), "IDLE"),
-        ClaudeState::NotRunning => ("✕", Color32::from_rgb(200, 60, 60), "STOPPED"),
+fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
+    let (state_color, label) = match &session.state {
+        ClaudeState::Working => (Color32::from_rgb(80, 200, 80), "WORKING"),
+        ClaudeState::WaitingForApproval => (Color32::from_rgb(220, 180, 0), "APPROVAL"),
+        ClaudeState::WaitingForAnswer => (Color32::from_rgb(80, 150, 220), "ANSWER"),
+        ClaudeState::Idle => (Color32::from_gray(160), "IDLE"),
+        ClaudeState::NotRunning => (Color32::from_rgb(200, 60, 60), "STOPPED"),
     };
 
-    let text = format!(
-        "{} {}  {}  [{}]",
-        indicator, session.pane.id, session.pane.project_name, label
-    );
+    ui.horizontal(|ui| {
+        // Mini robot art or spinner (fixed-width column, center-aligned)
+        ui.allocate_ui(egui::Vec2::new(40.0, ROW_HEIGHT), |ui| {
+            ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                let p = Color32::from_rgb(130, 80, 200);  // purple
+                let o = Color32::from_rgb(210, 110, 30);  // orange
+                let head_color = if matches!(
+                    session.state,
+                    ClaudeState::Working | ClaudeState::WaitingForApproval | ClaudeState::WaitingForAnswer
+                ) {
+                    if (time * 2.0) as usize % 2 == 0 { p } else { state_color }
+                } else {
+                    p
+                };
+                let lines: [(&str, Color32); 4] = [
+                    ("▟█▙", head_color),
+                    ("▐▛███▜▌", o),
+                    ("▝▜█████▛▘", o),
+                    ("▘▘ ▝▝", o),
+                ];
+                for (text, color) in lines {
+                    ui.label(RichText::new(text).size(5.0).color(color).monospace());
+                }
+            });
+        });
 
-    RichText::new(text).color(color).size(13.0)
+        ui.add_space(4.0);
+
+        // Session info, roughly vertically centered
+        ui.vertical(|ui| {
+            ui.add_space(3.0);
+            ui.label(
+                RichText::new(format!(
+                    "{}  {}  [{}]",
+                    session.pane.id, session.pane.project_name, label
+                ))
+                .color(state_color)
+                .size(13.0),
+            );
+        });
+    });
 }

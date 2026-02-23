@@ -1,8 +1,9 @@
 mod claude_state;
 mod monitor;
+mod picker;
 mod tmux;
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use eframe::egui::{self, Color32, RichText, Vec2};
 use monitor::{ClaudeSession, start_polling};
 use claude_state::ClaudeState;
@@ -14,6 +15,15 @@ struct Args {
     /// Background opacity (0.0 = fully transparent, 1.0 = fully opaque)
     #[arg(long, default_value_t = 0.24, value_parser = parse_opacity)]
     opacity: f32,
+
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Interactive TUI session picker
+    Picker,
 }
 
 fn parse_opacity(s: &str) -> Result<f32, String> {
@@ -31,8 +41,16 @@ const WINDOW_EMPTY_HEIGHT: f32 = 40.0;
 const ROW_HEIGHT: f32 = 20.0;
 const WINDOW_PADDING: f32 = 8.0;
 
-fn main() -> eframe::Result<()> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+    match args.command {
+        Some(Commands::Picker) => picker::run_picker()?,
+        None => run_gui(args.opacity)?,
+    }
+    Ok(())
+}
+
+fn run_gui(opacity: f32) -> eframe::Result<()> {
     let sessions: Arc<Mutex<Vec<ClaudeSession>>> = Arc::new(Mutex::new(vec![]));
     start_polling(Arc::clone(&sessions));
 
@@ -49,7 +67,7 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "claudeye",
         options,
-        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false, opacity: args.opacity }))),
+        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false, opacity }))),
     )
 }
 

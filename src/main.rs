@@ -58,7 +58,7 @@ fn run_gui() -> eframe::Result<()> {
     )
 }
 
-const WINDOW_TOP_MARGIN: f32 = 20.0;
+const WINDOW_TOP_MARGIN: f32 = 2.0;
 
 struct CcMonitorApp {
     sessions: Arc<Mutex<Vec<ClaudeSession>>>,

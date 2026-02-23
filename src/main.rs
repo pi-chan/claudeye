@@ -152,6 +152,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
     };
 
     ui.horizontal(|ui| {
+        ui.spacing_mut().item_spacing.x = 2.0;
         // Mini robot art or spinner (fixed-width column, center-aligned)
         ui.allocate_ui(egui::Vec2::new(40.0, ROW_HEIGHT), |ui| {
             ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
@@ -179,7 +180,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
         });
 
         // Speech bubble with tail pointing left toward robot
-        ui.add_space(6.0); // space for the tail triangle
+        ui.add_space(2.0); // space for the tail triangle
 
         // Clamp bubble width to remaining available space (minus inner padding + stroke)
         let max_label_width = (ui.available_width() - 14.0).max(0.0);
@@ -205,7 +206,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
         // Draw tail triangle pointing left toward the robot
         let rect = inner.response.rect;
         let mid_y = rect.center().y;
-        let tail_tip = egui::pos2(rect.left() - 6.0, mid_y);
+        let tail_tip = egui::pos2(rect.left() - 4.0, mid_y);
         let tail_top = egui::pos2(rect.left(), mid_y - 4.0);
         let tail_bot = egui::pos2(rect.left(), mid_y + 4.0);
         let painter = ui.painter();

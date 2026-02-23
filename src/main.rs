@@ -99,7 +99,7 @@ impl eframe::App for CcMonitorApp {
 
         let has_working = sessions.iter().any(|s| matches!(
             s.state,
-            ClaudeState::Working | ClaudeState::WaitingForApproval | ClaudeState::WaitingForAnswer
+            ClaudeState::Working | ClaudeState::WaitingForApproval
         ));
         if has_working {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
@@ -146,9 +146,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
     let (state_color, label) = match &session.state {
         ClaudeState::Working => (Color32::from_rgb(80, 200, 80), "WORKING"),
         ClaudeState::WaitingForApproval => (Color32::from_rgb(220, 180, 0), "APPROVAL"),
-        ClaudeState::WaitingForAnswer => (Color32::from_rgb(80, 150, 220), "ANSWER"),
         ClaudeState::Idle => (Color32::from_gray(160), "IDLE"),
-        ClaudeState::NotRunning => (Color32::from_rgb(200, 60, 60), "STOPPED"),
     };
 
     ui.horizontal(|ui| {
@@ -160,7 +158,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
                 let o = Color32::from_rgb(210, 110, 30);  // orange
                 let head_color = if matches!(
                     session.state,
-                    ClaudeState::Working | ClaudeState::WaitingForApproval | ClaudeState::WaitingForAnswer
+                    ClaudeState::Working | ClaudeState::WaitingForApproval
                 ) {
                     if (time * 2.0) as usize % 2 == 0 { p } else { state_color }
                 } else {

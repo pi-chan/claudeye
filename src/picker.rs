@@ -157,9 +157,7 @@ fn state_display(state: &ClaudeState) -> (&'static str, Color, &'static str) {
     match state {
         ClaudeState::Working => ("●", Color::Green, "WORKING"),
         ClaudeState::WaitingForApproval => ("●", Color::Yellow, "APPROVAL"),
-        ClaudeState::WaitingForAnswer => ("●", Color::Blue, "ANSWER"),
         ClaudeState::Idle => ("○", Color::Gray, "IDLE"),
-        ClaudeState::NotRunning => ("✕", Color::Red, "STOPPED"),
     }
 }
 

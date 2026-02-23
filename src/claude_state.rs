@@ -5,13 +5,7 @@ use std::sync::OnceLock;
 pub enum ClaudeState {
     Working,
     WaitingForApproval,
-    /// Defined in UI but not yet returned by detect_state()
-    #[allow(dead_code)]
-    WaitingForAnswer,
     Idle,
-    /// Defined in UI but not yet returned by detect_state()
-    #[allow(dead_code)]
-    NotRunning,
 }
 
 const LAST_LINES_COUNT: usize = 30;

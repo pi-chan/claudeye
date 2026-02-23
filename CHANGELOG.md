@@ -2,12 +2,24 @@
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-23
+
 ### Added
 
 - `picker` subcommand — interactive TUI session picker using ratatui/crossterm
   - Number keys `1`–`9` jump directly to the corresponding session
   - `j`/`k` (or arrow keys) for navigation, `Enter` to switch, `q`/`Esc` to quit
   - `tmux switch-client` integration to jump to the selected pane
+- Clawd robot mascot art rendered per session in the overlay
+  - Robot head animates (color blinks) while Claude is working or waiting for approval
+- `--compact` flag — show one session at a time, cycling every second
+
+### Changed
+
+- Overlay background is now fully transparent (removed `--opacity` option)
+- Session info displayed as a speech bubble with color-coded border
+- State labels renamed: `WORKING` → `Running`, `APPROVAL` → `Approval`, `IDLE` → `Idle`
+- Overlay positioned 2px from the top of the screen
 
 ## [0.1.0] - 2026-02-23
 
@@ -25,5 +37,6 @@
 - Project renamed from `ccmonitor` to `claudeye`
 - Overlay window height adjusts dynamically per session row count
 
-[Unreleased]: https://github.com/maedana/claudeye/compare/v0.1...HEAD
-[0.1.0]: https://github.com/maedana/claudeye/releases/tag/v0.1
+[Unreleased]: https://github.com/maedana/claudeye/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/maedana/claudeye/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/maedana/claudeye/releases/tag/v0.1.0

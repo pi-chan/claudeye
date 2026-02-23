@@ -83,12 +83,12 @@ impl eframe::App for CcMonitorApp {
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
         ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
 
-        if !self.positioned {
-            if let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size) {
-                let x = (monitor_size.x - WINDOW_WIDTH) / 2.0;
-                ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(x, WINDOW_TOP_MARGIN)));
-                self.positioned = true;
-            }
+        if !self.positioned
+            && let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size)
+        {
+            let x = (monitor_size.x - WINDOW_WIDTH) / 2.0;
+            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(x, WINDOW_TOP_MARGIN)));
+            self.positioned = true;
         }
 
         let sessions = match self.sessions.lock() {
@@ -170,7 +170,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
                     session.state,
                     ClaudeState::Working | ClaudeState::WaitingForApproval
                 ) {
-                    if (time * 2.0) as usize % 2 == 0 { p } else { state_color }
+                    if ((time * 2.0) as usize).is_multiple_of(2) { p } else { state_color }
                 } else {
                     p
                 };

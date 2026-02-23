@@ -12,10 +12,6 @@ use std::sync::{Arc, Mutex};
 #[derive(Parser)]
 #[command(about = "Claude session monitor overlay")]
 struct Args {
-    /// Background opacity (0.0 = fully transparent, 1.0 = fully opaque)
-    #[arg(long, default_value_t = 0.24, value_parser = parse_opacity)]
-    opacity: f32,
-
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -24,15 +20,6 @@ struct Args {
 enum Commands {
     /// Interactive TUI session picker
     Picker,
-}
-
-fn parse_opacity(s: &str) -> Result<f32, String> {
-    let v: f32 = s.parse().map_err(|_| format!("'{s}' is not a valid number"))?;
-    if (0.0..=1.0).contains(&v) {
-        Ok(v)
-    } else {
-        Err(format!("opacity must be between 0.0 and 1.0, got {v}"))
-    }
 }
 
 const REPAINT_INTERVAL_SECS: u64 = 2;
@@ -45,12 +32,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     match args.command {
         Some(Commands::Picker) => picker::run_picker()?,
-        None => run_gui(args.opacity)?,
+        None => run_gui()?,
     }
     Ok(())
 }
 
-fn run_gui(opacity: f32) -> eframe::Result<()> {
+fn run_gui() -> eframe::Result<()> {
     let sessions: Arc<Mutex<Vec<ClaudeSession>>> = Arc::new(Mutex::new(vec![]));
     start_polling(Arc::clone(&sessions));
 
@@ -67,7 +54,7 @@ fn run_gui(opacity: f32) -> eframe::Result<()> {
     eframe::run_native(
         "claudeye",
         options,
-        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false, opacity }))),
+        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false }))),
     )
 }
 
@@ -76,11 +63,18 @@ const WINDOW_TOP_MARGIN: f32 = 20.0;
 struct CcMonitorApp {
     sessions: Arc<Mutex<Vec<ClaudeSession>>>,
     positioned: bool,
-    opacity: f32,
 }
 
 impl eframe::App for CcMonitorApp {
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        [0.0, 0.0, 0.0, 0.0]
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        let mut visuals = ctx.style().visuals.clone();
+        visuals.panel_fill = Color32::TRANSPARENT;
+        ctx.set_visuals(visuals);
+
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
         ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
 
@@ -125,7 +119,7 @@ impl eframe::App for CcMonitorApp {
         egui::CentralPanel::default()
             .frame(
                 egui::Frame::none()
-                    .fill(Color32::from_rgba_unmultiplied(20, 20, 20, (self.opacity * 255.0) as u8))
+                    .fill(Color32::TRANSPARENT)
                     .inner_margin(egui::Margin::symmetric(8.0, WINDOW_PADDING)),
             )
             .show(ctx, |ui| {

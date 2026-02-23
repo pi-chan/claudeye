@@ -33,15 +33,10 @@ cargo install claudeye
 
 ```sh
 claudeye [--opacity <VALUE>]
+claudeye picker
 ```
 
-### Options
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--opacity <VALUE>` | `0.24` | Background opacity (0.0 = fully transparent, 1.0 = fully opaque) |
-
-### Examples
+### Overlay mode
 
 ```sh
 # Run with default opacity
@@ -54,7 +49,31 @@ claudeye --opacity 0.6
 claudeye --opacity 0.0
 ```
 
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--opacity <VALUE>` | `0.24` | Background opacity (0.0 = fully transparent, 1.0 = fully opaque) |
+
+### Picker mode
+
+```sh
+claudeye picker
+```
+
+An interactive TUI session picker. Use it to quickly switch to any Claude session:
+
+| Key | Action |
+|-----|--------|
+| `1`–`9` | Jump directly to that session |
+| `j` / `↓` | Move selection down |
+| `k` / `↑` | Move selection up |
+| `Enter` | Switch to selected session |
+| `q` / `Esc` | Quit without switching |
+
+Sessions beyond the 9th are accessible via `j`/`k` navigation.
+
 ## How it works
+
+### Overlay mode
 
 1. A background thread periodically polls `tmux list-panes -a` to find all panes running `claude`.
 2. For each matching pane, it runs `tmux capture-pane` to read the terminal content.
@@ -66,6 +85,13 @@ The overlay window is:
 - Always on top of other windows
 - Click-through (mouse events pass through to windows below)
 - Transparent background with configurable opacity
+
+### Picker mode
+
+1. Runs `tmux list-panes -a` once to collect all panes running `claude`.
+2. Captures each pane's content to determine its current state.
+3. Displays the sessions in a ratatui TUI list with state indicators and numeric labels.
+4. On selection, runs `tmux switch-client` to jump to the chosen pane.
 
 ## Development
 

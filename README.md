@@ -6,15 +6,13 @@ A transparent always-on-top overlay that monitors Claude Code sessions running i
 
 claudeye periodically polls all tmux panes, finds those running the `claude` command, and displays their status in a small floating window at the top center of your screen. The window is click-through, so it never interferes with your workflow.
 
-Each session is shown with a colored indicator:
+Each session is shown as a mini Clawd (the Claude robot mascot) with a speech bubble indicating its current state:
 
 | Indicator | Color  | Meaning                               |
 |-----------|--------|---------------------------------------|
 | `●`       | Green  | Working (Claude is processing)        |
 | `●`       | Yellow | Waiting for your approval             |
-| `●`       | Blue   | Waiting for your answer               |
 | `○`       | Gray   | Idle (prompt shown, waiting for input)|
-| `✕`       | Red    | Stopped                               |
 
 ## Requirements
 
@@ -32,26 +30,25 @@ cargo install claudeye
 ## Usage
 
 ```sh
-claudeye [--opacity <VALUE>]
+claudeye [--compact]
 claudeye picker
 ```
 
 ### Overlay mode
 
 ```sh
-# Run with default opacity
+# Run with default settings (show all sessions)
 claudeye
 
-# Run with a more visible background
-claudeye --opacity 0.6
-
-# Run fully transparent background (text only)
-claudeye --opacity 0.0
+# Run in compact mode (cycle through one session at a time, one per second)
+claudeye --compact
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--opacity <VALUE>` | `0.24` | Background opacity (0.0 = fully transparent, 1.0 = fully opaque) |
+| Option | Description |
+|--------|-------------|
+| `--compact` | Show one session at a time, cycling every second |
+
+![Overlay mode][1]
 
 ### Picker mode
 
@@ -71,6 +68,8 @@ An interactive TUI session picker. Use it to quickly switch to any Claude sessio
 
 Sessions beyond the 9th are accessible via `j`/`k` navigation.
 
+![Picker mode][2]
+
 ## How it works
 
 ### Overlay mode
@@ -84,7 +83,7 @@ The overlay window is:
 - Positioned at the top center of your primary monitor
 - Always on top of other windows
 - Click-through (mouse events pass through to windows below)
-- Transparent background with configurable opacity
+- Fully transparent background
 
 ### Picker mode
 
@@ -101,3 +100,6 @@ cargo clippy  # Run linter
 cargo fmt     # Format code
 cargo run     # Run in development mode
 ```
+
+[1]: https://raw.githubusercontent.com/maedana/claudeye/main/demo/demo.png
+[2]: https://raw.githubusercontent.com/maedana/claudeye/main/demo/demo2.gif

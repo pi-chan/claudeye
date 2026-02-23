@@ -153,9 +153,9 @@ impl eframe::App for CcMonitorApp {
 
 fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
     let (state_color, label) = match &session.state {
-        ClaudeState::Working => (Color32::from_rgb(80, 200, 80), "WORKING"),
-        ClaudeState::WaitingForApproval => (Color32::from_rgb(220, 180, 0), "APPROVAL"),
-        ClaudeState::Idle => (Color32::from_gray(160), "IDLE"),
+        ClaudeState::Working => (Color32::from_rgb(80, 200, 80), "Running"),
+        ClaudeState::WaitingForApproval => (Color32::from_rgb(220, 180, 0), "Approval"),
+        ClaudeState::Idle => (Color32::from_gray(160), "Idle"),
     };
 
     ui.horizontal(|ui| {

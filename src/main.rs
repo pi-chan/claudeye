@@ -38,7 +38,7 @@ fn parse_opacity(s: &str) -> Result<f32, String> {
 const REPAINT_INTERVAL_SECS: u64 = 2;
 const WINDOW_WIDTH: f32 = 300.0;
 const WINDOW_EMPTY_HEIGHT: f32 = 40.0;
-const ROW_HEIGHT: f32 = 20.0;
+const ROW_HEIGHT: f32 = 22.0;
 const WINDOW_PADDING: f32 = 8.0;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -109,10 +109,12 @@ impl eframe::App for CcMonitorApp {
 
         let time = ctx.input(|i| i.time);
 
+        let n = sessions.len() as f32;
         let window_height = if sessions.is_empty() {
             WINDOW_EMPTY_HEIGHT
         } else {
-            sessions.len() as f32 * ROW_HEIGHT + WINDOW_PADDING * 2.0
+            // ROW_HEIGHT per row + 4px item_spacing between rows + top/bottom padding
+            n * ROW_HEIGHT + (n - 1.0) * 4.0 + WINDOW_PADDING * 2.0
         };
 
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(
@@ -176,19 +178,43 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
             });
         });
 
-        ui.add_space(4.0);
+        // Speech bubble with tail pointing left toward robot
+        ui.add_space(6.0); // space for the tail triangle
 
-        // Session info, roughly vertically centered
-        ui.vertical(|ui| {
-            ui.add_space(3.0);
-            ui.label(
-                RichText::new(format!(
-                    "{}  {}  [{}]",
-                    session.pane.id, session.pane.project_name, label
-                ))
-                .color(state_color)
-                .size(13.0),
-            );
-        });
+        // Clamp bubble width to remaining available space (minus inner padding + stroke)
+        let max_label_width = (ui.available_width() - 14.0).max(0.0);
+
+        let bubble_fill = Color32::from_rgba_unmultiplied(30, 30, 45, 220);
+        let inner = egui::Frame::none()
+            .fill(bubble_fill)
+            .stroke(egui::Stroke::new(1.0, state_color))
+            .rounding(egui::Rounding::same(5.0))
+            .inner_margin(egui::Margin::symmetric(6.0, 2.0))
+            .show(ui, |ui: &mut Ui| {
+                ui.set_max_width(max_label_width);
+                ui.label(
+                    RichText::new(format!(
+                        "{}  {}  [{}]",
+                        session.pane.id, session.pane.project_name, label
+                    ))
+                    .color(state_color)
+                    .size(11.0),
+                );
+            });
+
+        // Draw tail triangle pointing left toward the robot
+        let rect = inner.response.rect;
+        let mid_y = rect.center().y;
+        let tail_tip = egui::pos2(rect.left() - 6.0, mid_y);
+        let tail_top = egui::pos2(rect.left(), mid_y - 4.0);
+        let tail_bot = egui::pos2(rect.left(), mid_y + 4.0);
+        let painter = ui.painter();
+        painter.add(egui::Shape::convex_polygon(
+            vec![tail_tip, tail_top, tail_bot],
+            bubble_fill,
+            egui::Stroke::NONE,
+        ));
+        painter.line_segment([tail_tip, tail_top], egui::Stroke::new(1.0, state_color));
+        painter.line_segment([tail_tip, tail_bot], egui::Stroke::new(1.0, state_color));
     });
 }

@@ -12,6 +12,10 @@ use std::sync::{Arc, Mutex};
 #[derive(Parser)]
 #[command(about = "Claude session monitor overlay")]
 struct Args {
+    /// Show one session at a time, cycling every second
+    #[arg(long)]
+    compact: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -32,12 +36,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     match args.command {
         Some(Commands::Picker) => picker::run_picker()?,
-        None => run_gui()?,
+        None => run_gui(args.compact)?,
     }
     Ok(())
 }
 
-fn run_gui() -> eframe::Result<()> {
+fn run_gui(compact: bool) -> eframe::Result<()> {
     let sessions: Arc<Mutex<Vec<ClaudeSession>>> = Arc::new(Mutex::new(vec![]));
     start_polling(Arc::clone(&sessions));
 
@@ -54,7 +58,7 @@ fn run_gui() -> eframe::Result<()> {
     eframe::run_native(
         "claudeye",
         options,
-        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false }))),
+        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false, compact }))),
     )
 }
 
@@ -63,6 +67,7 @@ const WINDOW_TOP_MARGIN: f32 = 2.0;
 struct CcMonitorApp {
     sessions: Arc<Mutex<Vec<ClaudeSession>>>,
     positioned: bool,
+    compact: bool,
 }
 
 impl eframe::App for CcMonitorApp {
@@ -95,7 +100,7 @@ impl eframe::App for CcMonitorApp {
             s.state,
             ClaudeState::Working | ClaudeState::WaitingForApproval
         ));
-        if has_working {
+        if has_working || self.compact {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         } else {
             ctx.request_repaint_after(std::time::Duration::from_secs(REPAINT_INTERVAL_SECS));
@@ -103,8 +108,16 @@ impl eframe::App for CcMonitorApp {
 
         let time = ctx.input(|i| i.time);
 
-        let n = sessions.len() as f32;
-        let window_height = if sessions.is_empty() {
+        // In compact mode, show one session at a time cycling every second
+        let display_sessions: Vec<&ClaudeSession> = if self.compact && !sessions.is_empty() {
+            let idx = (time as usize) % sessions.len();
+            vec![&sessions[idx]]
+        } else {
+            sessions.iter().collect()
+        };
+
+        let n = display_sessions.len() as f32;
+        let window_height = if display_sessions.is_empty() {
             WINDOW_EMPTY_HEIGHT
         } else {
             // ROW_HEIGHT per row + 4px item_spacing between rows + top/bottom padding
@@ -123,14 +136,14 @@ impl eframe::App for CcMonitorApp {
                     .inner_margin(egui::Margin::symmetric(8.0, WINDOW_PADDING)),
             )
             .show(ctx, |ui| {
-                if sessions.is_empty() {
+                if display_sessions.is_empty() {
                     ui.label(
                         RichText::new("No Claude sessions found")
                             .color(Color32::from_gray(120))
                             .size(12.0),
                     );
                 } else {
-                    for session in &sessions {
+                    for session in &display_sessions {
                         render_session_row(ui, session, time);
                     }
                 }

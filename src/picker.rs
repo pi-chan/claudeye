@@ -55,12 +55,7 @@ pub fn run_picker() -> io::Result<()> {
         .map(|pane| {
             let content = tmux::capture_pane(&pane.id);
             let state = detect_state(&content);
-            ClaudeSession {
-                pane,
-                state,
-                last_updated: std::time::Instant::now(),
-                state_changed_at: std::time::Instant::now(),
-            }
+            ClaudeSession { pane, state, state_changed_at: std::time::Instant::now() }
         })
         .collect();
 
@@ -166,7 +161,6 @@ fn state_display(state: &ClaudeState) -> (&'static str, Color, &'static str) {
 mod tests {
     use super::*;
     use crate::tmux::PaneInfo;
-    use std::time::Instant;
 
     fn make_session(id: &str) -> ClaudeSession {
         ClaudeSession {
@@ -177,8 +171,7 @@ mod tests {
                 project_name: "test".to_string(),
             },
             state: ClaudeState::Idle,
-            last_updated: Instant::now(),
-            state_changed_at: Instant::now(),
+            state_changed_at: std::time::Instant::now(),
         }
     }
 

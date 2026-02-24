@@ -96,12 +96,12 @@ impl eframe::App for CcMonitorApp {
             Err(_) => return, // poisoned mutex: polling thread panicked
         };
 
-        let needs_fast_repaint = sessions.iter().any(|s| match s.state {
-            ClaudeState::Working | ClaudeState::WaitingForApproval => true,
-            ClaudeState::Idle => s.state_changed_at.elapsed().as_secs_f32() < 10.0,
-        });
+        let needs_fast_repaint = sessions.iter().any(|s| matches!(s.state, ClaudeState::Working | ClaudeState::WaitingForApproval));
         if needs_fast_repaint || self.compact {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
+        } else if !sessions.is_empty() {
+            // Repaint every second to keep elapsed time display up to date
+            ctx.request_repaint_after(std::time::Duration::from_secs(1));
         } else {
             ctx.request_repaint_after(std::time::Duration::from_secs(REPAINT_INTERVAL_SECS));
         }
@@ -151,19 +151,13 @@ impl eframe::App for CcMonitorApp {
     }
 }
 
-fn calc_stroke_width(state: &ClaudeState, elapsed_secs: f32, time: f64) -> f32 {
+fn calc_stroke_width(state: &ClaudeState, time: f64) -> f32 {
     match state {
         ClaudeState::WaitingForApproval => {
             let pulse = ((time * 16.0).sin() as f32 + 1.0) / 2.0;
             1.0 + pulse * 2.0
         }
-        ClaudeState::Idle => {
-            let decay = (1.0 - elapsed_secs / 10.0).clamp(0.0, 1.0);
-            let speed = 3.0 + 13.0 * decay as f64; // 16.0 → 3.0
-            let pulse = ((time * speed).sin() as f32 + 1.0) / 2.0;
-            1.0 + pulse * 2.0 * decay
-        }
-        ClaudeState::Working => 1.0,
+        ClaudeState::Working | ClaudeState::Idle => 1.0,
     }
 }
 
@@ -174,8 +168,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
         ClaudeState::Idle => (Color32::from_gray(160), "Idle"),
     };
 
-    let elapsed = session.state_changed_at.elapsed().as_secs_f32();
-    let stroke_width = calc_stroke_width(&session.state, elapsed, time);
+    let stroke_width = calc_stroke_width(&session.state, time);
 
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
@@ -210,10 +203,11 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
             .inner_margin(egui::Margin::symmetric(6.0, 2.0))
             .show(ui, |ui: &mut Ui| {
                 ui.set_max_width(max_label_width);
+                let elapsed = session.state_changed_at.elapsed().as_secs();
                 ui.label(
                     RichText::new(format!(
-                        "{}  {}  [{}]",
-                        session.pane.id, session.pane.project_name, label
+                        "{}  {}  [{}] {}s",
+                        session.pane.id, session.pane.project_name, label, elapsed
                     ))
                     .color(state_color)
                     .size(11.0),
@@ -243,45 +237,27 @@ mod tests {
 
     #[test]
     fn stroke_width_working_is_always_one() {
-        assert_eq!(calc_stroke_width(&ClaudeState::Working, 0.0, 0.0), 1.0);
-        assert_eq!(calc_stroke_width(&ClaudeState::Working, 100.0, 5.0), 1.0);
+        assert_eq!(calc_stroke_width(&ClaudeState::Working, 0.0), 1.0);
+        assert_eq!(calc_stroke_width(&ClaudeState::Working, 5.0), 1.0);
+    }
+
+    #[test]
+    fn stroke_width_idle_is_always_one() {
+        assert_eq!(calc_stroke_width(&ClaudeState::Idle, 0.0), 1.0);
+        assert_eq!(calc_stroke_width(&ClaudeState::Idle, 5.0), 1.0);
     }
 
     #[test]
     fn stroke_width_approval_always_pulses_strongly() {
-        for elapsed in [0.0, 5.0, 30.0, 100.0] {
-            let mut saw_peak = false;
-            for t in 0..100 {
-                let time = t as f64 * 0.1;
-                let w = calc_stroke_width(&ClaudeState::WaitingForApproval, elapsed, time);
-                assert!(w >= 1.0 && w <= 3.0, "got {w} at elapsed {elapsed}, time {time}");
-                if w > 2.5 {
-                    saw_peak = true;
-                }
-            }
-            assert!(saw_peak, "should reach near 3.0 at elapsed {elapsed}");
-        }
-    }
-
-    #[test]
-    fn stroke_width_idle_starts_strong() {
         let mut saw_peak = false;
         for t in 0..100 {
             let time = t as f64 * 0.1;
-            let w = calc_stroke_width(&ClaudeState::Idle, 0.0, time);
+            let w = calc_stroke_width(&ClaudeState::WaitingForApproval, time);
             assert!(w >= 1.0 && w <= 3.0, "got {w} at time {time}");
             if w > 2.5 {
                 saw_peak = true;
             }
         }
-        assert!(saw_peak, "should pulse strongly at start");
-    }
-
-    #[test]
-    fn stroke_width_idle_stops_after_10s() {
-        for t in 0..100 {
-            let time = t as f64 * 0.1;
-            assert_eq!(calc_stroke_width(&ClaudeState::Idle, 10.0, time), 1.0);
-        }
+        assert!(saw_peak, "should reach near 3.0");
     }
 }

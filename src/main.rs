@@ -154,9 +154,8 @@ impl eframe::App for CcMonitorApp {
 fn calc_stroke_width(state: &ClaudeState, elapsed_secs: f32, time: f64) -> f32 {
     match state {
         ClaudeState::WaitingForApproval => {
-            let amplitude = (2.0 - elapsed_secs * 0.1).clamp(1.0, 2.0);
-            let pulse = ((time * 4.0).sin() as f32 + 1.0) / 2.0;
-            1.0 + pulse * amplitude
+            let pulse = ((time * 16.0).sin() as f32 + 1.0) / 2.0;
+            1.0 + pulse * 2.0
         }
         ClaudeState::Idle => {
             let grace = 4.0_f32;
@@ -187,18 +186,9 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
         ui.allocate_ui(egui::Vec2::new(40.0, ROW_HEIGHT), |ui| {
             ui.with_layout(egui::Layout::top_down(egui::Align::Center), |ui| {
                 ui.spacing_mut().item_spacing.y = 0.0;
-                let p = Color32::from_rgb(130, 80, 200);  // purple
                 let o = Color32::from_rgb(210, 110, 30);  // orange
-                let head_color = if matches!(
-                    session.state,
-                    ClaudeState::Working | ClaudeState::WaitingForApproval
-                ) {
-                    if ((time * 2.0) as usize).is_multiple_of(2) { p } else { state_color }
-                } else {
-                    p
-                };
                 let lines: [(&str, Color32); 4] = [
-                    ("▟█▙", head_color),
+                    ("▟█▙", state_color),
                     ("▐▛███▜▌", o),
                     ("▝▜█████▛▘", o),
                     ("▘▘ ▝▝", o),
@@ -261,25 +251,18 @@ mod tests {
     }
 
     #[test]
-    fn stroke_width_approval_pulses_between_1_and_3() {
-        let mut saw_above_one = false;
-        for t in 0..100 {
-            let time = t as f64 * 0.1;
-            let w = calc_stroke_width(&ClaudeState::WaitingForApproval, 0.0, time);
-            assert!(w >= 1.0 && w <= 3.0, "got {w} at time {time}");
-            if w > 1.5 {
-                saw_above_one = true;
+    fn stroke_width_approval_always_pulses_strongly() {
+        for elapsed in [0.0, 5.0, 30.0, 100.0] {
+            let mut saw_peak = false;
+            for t in 0..100 {
+                let time = t as f64 * 0.1;
+                let w = calc_stroke_width(&ClaudeState::WaitingForApproval, elapsed, time);
+                assert!(w >= 1.0 && w <= 3.0, "got {w} at elapsed {elapsed}, time {time}");
+                if w > 2.5 {
+                    saw_peak = true;
+                }
             }
-        }
-        assert!(saw_above_one, "pulse should exceed 1.5 at some point");
-    }
-
-    #[test]
-    fn stroke_width_approval_amplitude_decays_after_10s() {
-        for t in 0..100 {
-            let time = t as f64 * 0.1;
-            let w = calc_stroke_width(&ClaudeState::WaitingForApproval, 15.0, time);
-            assert!(w >= 1.0 && w <= 2.0, "got {w} at time {time}");
+            assert!(saw_peak, "should reach near 3.0 at elapsed {elapsed}");
         }
     }
 

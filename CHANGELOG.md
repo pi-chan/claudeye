@@ -10,6 +10,7 @@
 
 ### Changed
 
+- Overlay window width now adjusts dynamically to fit session content
 - WaitingForApproval pulse now constant full intensity instead of gradually decaying
 - Robot head uses fixed state color per state instead of blinking
 - Removed Idle pulse animation (stroke width is now constant)

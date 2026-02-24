@@ -69,11 +69,13 @@ impl Position {
 }
 
 const REPAINT_INTERVAL_SECS: u64 = 2;
-const WINDOW_WIDTH: f32 = 300.0;
+const MIN_WINDOW_WIDTH: f32 = 180.0;
 const WINDOW_EMPTY_HEIGHT: f32 = 40.0;
 const ROW_HEIGHT: f32 = 22.0;
 const WINDOW_PADDING: f32 = 8.0;
 const MARGIN: f32 = 2.0;
+/// Horizontal overhead per session row (panel margin + robot art + spacing + bubble padding + buffer).
+const ROW_HORIZONTAL_OVERHEAD: f32 = 82.0;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
@@ -93,7 +95,7 @@ fn run_gui(compact: bool, position: Position) -> eframe::Result<()> {
             .with_decorations(false)
             .with_always_on_top()
             .with_mouse_passthrough(true)
-            .with_inner_size([WINDOW_WIDTH, WINDOW_EMPTY_HEIGHT])
+            .with_inner_size([MIN_WINDOW_WIDTH, WINDOW_EMPTY_HEIGHT])
             .with_transparent(true),
         ..Default::default()
     };
@@ -157,13 +159,23 @@ impl eframe::App for CcMonitorApp {
             n * ROW_HEIGHT + (n - 1.0) * 4.0 + WINDOW_PADDING * 2.0
         };
 
+        let window_width = if display_sessions.is_empty() {
+            MIN_WINDOW_WIDTH
+        } else {
+            let max_text = display_sessions
+                .iter()
+                .map(|s| measure_session_text_width(ctx, s))
+                .fold(0.0_f32, f32::max);
+            (max_text + ROW_HORIZONTAL_OVERHEAD).max(MIN_WINDOW_WIDTH)
+        };
+
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(Vec2::new(
-            WINDOW_WIDTH,
+            window_width,
             window_height,
         )));
 
         if let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size) {
-            let pos = self.position.compute(monitor_size, Vec2::new(WINDOW_WIDTH, window_height));
+            let pos = self.position.compute(monitor_size, Vec2::new(window_width, window_height));
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(pos));
         }
 
@@ -187,6 +199,23 @@ impl eframe::App for CcMonitorApp {
                 }
             });
     }
+}
+
+/// Measure the rendered text width of a session row using the egui font system.
+///
+/// State label is fixed to the longest value ("Approval") and elapsed to a
+/// wide placeholder ("9999s") to prevent jitter from state transitions or
+/// ticking seconds.
+fn measure_session_text_width(ctx: &egui::Context, session: &ClaudeSession) -> f32 {
+    let text = format!(
+        "{}  {}  [{}] {}",
+        session.pane.id, session.pane.project_name, "Approval", "9999s"
+    );
+    let font_id = egui::FontId::proportional(11.0);
+    ctx.fonts(|fonts| {
+        let galley = fonts.layout_no_wrap(text, font_id, Color32::WHITE);
+        galley.size().x
+    })
 }
 
 fn calc_stroke_width(state: &ClaudeState, time: f64) -> f32 {
@@ -324,5 +353,16 @@ mod tests {
             }
         }
         assert!(saw_peak, "should reach near 3.0");
+    }
+
+    #[test]
+    fn min_window_width_is_positive_and_reasonable() {
+        assert!(MIN_WINDOW_WIDTH > 0.0);
+        assert!(MIN_WINDOW_WIDTH <= 300.0, "MIN_WINDOW_WIDTH should be modest");
+    }
+
+    #[test]
+    fn row_horizontal_overhead_is_positive() {
+        assert!(ROW_HORIZONTAL_OVERHEAD > 0.0);
     }
 }

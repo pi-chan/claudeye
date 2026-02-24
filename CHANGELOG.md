@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-02-24
+
+### Fixed
+
+- Detect versioned `claude` binary names in tmux pane commands on macOS
+  - On macOS, the `claude` binary is a symlink to a versioned path under `~/.local/share/claude/versions/`, causing tmux to report the version number as the command name instead of `claude`. Version names are now resolved at startup so claude sessions are correctly detected.
+
+### Changed
+
+- Remove unused `x11rb` dependency
+
 ## [0.2.0] - 2026-02-23
 
 ### Added
@@ -37,6 +48,7 @@
 - Project renamed from `ccmonitor` to `claudeye`
 - Overlay window height adjusts dynamically per session row count
 
-[Unreleased]: https://github.com/maedana/claudeye/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/maedana/claudeye/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/maedana/claudeye/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/maedana/claudeye/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/maedana/claudeye/releases/tag/v0.1.0

@@ -1,6 +1,6 @@
 [package]
 name = "claudeye"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "Claude session monitor overlay for tmux"
 license = "MIT"
@@ -17,6 +17,5 @@ eframe = "0.30"
 egui = "0.30"
 ratatui = "0.29"
 regex = "1"
-x11rb = "0.13"
 
 [dev-dependencies]

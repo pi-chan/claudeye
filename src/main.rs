@@ -10,7 +10,7 @@ use claude_state::ClaudeState;
 use std::sync::{Arc, Mutex};
 
 #[derive(Parser)]
-#[command(about = "Claude session monitor overlay")]
+#[command(about = "Claude session monitor overlay", version)]
 struct Args {
     /// Show one session at a time, cycling every second
     #[arg(long)]

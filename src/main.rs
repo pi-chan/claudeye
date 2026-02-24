@@ -20,6 +20,10 @@ struct Args {
     #[arg(long, short, default_value = "top-center", value_enum)]
     position: Position,
 
+    /// Move overlay to screen center when any session stays in Approval/Idle for over 10 seconds
+    #[arg(long)]
+    center_on_stale: bool,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -69,6 +73,7 @@ impl Position {
 }
 
 const REPAINT_INTERVAL_SECS: u64 = 2;
+const STALE_THRESHOLD_SECS: u64 = 10;
 const MIN_WINDOW_WIDTH: f32 = 180.0;
 const WINDOW_EMPTY_HEIGHT: f32 = 40.0;
 const ROW_HEIGHT: f32 = 22.0;
@@ -81,12 +86,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     match args.command {
         Some(Commands::Picker) => picker::run_picker()?,
-        None => run_gui(args.compact, args.position)?,
+        None => run_gui(args.compact, args.position, args.center_on_stale)?,
     }
     Ok(())
 }
 
-fn run_gui(compact: bool, position: Position) -> eframe::Result<()> {
+fn run_gui(compact: bool, position: Position, center_on_stale: bool) -> eframe::Result<()> {
     let sessions: Arc<Mutex<Vec<ClaudeSession>>> = Arc::new(Mutex::new(vec![]));
     start_polling(Arc::clone(&sessions));
 
@@ -103,7 +108,7 @@ fn run_gui(compact: bool, position: Position) -> eframe::Result<()> {
     eframe::run_native(
         "claudeye",
         options,
-        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, compact, position }))),
+        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, compact, position, center_on_stale }))),
     )
 }
 
@@ -111,6 +116,7 @@ struct CcMonitorApp {
     sessions: Arc<Mutex<Vec<ClaudeSession>>>,
     compact: bool,
     position: Position,
+    center_on_stale: bool,
 }
 
 impl eframe::App for CcMonitorApp {
@@ -175,7 +181,12 @@ impl eframe::App for CcMonitorApp {
         )));
 
         if let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size) {
-            let pos = self.position.compute(monitor_size, Vec2::new(window_width, window_height));
+            let effective_position = if self.center_on_stale && has_stale_session(&sessions) {
+                Position::MiddleCenter
+            } else {
+                self.position
+            };
+            let pos = effective_position.compute(monitor_size, Vec2::new(window_width, window_height));
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(pos));
         }
 
@@ -298,9 +309,19 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
     });
 }
 
+fn has_stale_session(sessions: &[ClaudeSession]) -> bool {
+    sessions.iter().any(|s| match s.state {
+        ClaudeState::WaitingForApproval => true,
+        ClaudeState::Idle => s.state_changed_at.elapsed().as_secs() >= STALE_THRESHOLD_SECS,
+        _ => false,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::{Duration, Instant};
+    use crate::tmux::PaneInfo;
 
     #[test]
     fn stroke_width_working_is_always_one() {
@@ -364,5 +385,68 @@ mod tests {
     #[test]
     fn row_horizontal_overhead_is_positive() {
         assert!(ROW_HORIZONTAL_OVERHEAD > 0.0);
+    }
+
+    fn make_session(state: ClaudeState, elapsed: Duration) -> ClaudeSession {
+        ClaudeSession {
+            pane: PaneInfo {
+                id: "test".to_string(),
+                pid: 1,
+                cwd: "/tmp".to_string(),
+                project_name: "test-project".to_string(),
+            },
+            state,
+            state_changed_at: Instant::now() - elapsed,
+        }
+    }
+
+    #[test]
+    fn has_stale_session_empty_sessions() {
+        assert!(!has_stale_session(&[]));
+    }
+
+    #[test]
+    fn has_stale_session_working_only() {
+        let sessions = vec![make_session(ClaudeState::Working, Duration::from_secs(30))];
+        assert!(!has_stale_session(&sessions));
+    }
+
+    #[test]
+    fn has_stale_session_idle_under_threshold() {
+        let sessions = vec![make_session(ClaudeState::Idle, Duration::from_secs(5))];
+        assert!(!has_stale_session(&sessions));
+    }
+
+    #[test]
+    fn has_stale_session_idle_over_threshold() {
+        let sessions = vec![make_session(ClaudeState::Idle, Duration::from_secs(11))];
+        assert!(has_stale_session(&sessions));
+    }
+
+    #[test]
+    fn has_stale_session_approval_immediately() {
+        let sessions = vec![make_session(
+            ClaudeState::WaitingForApproval,
+            Duration::from_secs(0),
+        )];
+        assert!(has_stale_session(&sessions));
+    }
+
+    #[test]
+    fn has_stale_session_mixed_working_and_stale_idle() {
+        let sessions = vec![
+            make_session(ClaudeState::Working, Duration::from_secs(30)),
+            make_session(ClaudeState::Idle, Duration::from_secs(15)),
+        ];
+        assert!(has_stale_session(&sessions));
+    }
+
+    #[test]
+    fn has_stale_session_mixed_working_and_approval() {
+        let sessions = vec![
+            make_session(ClaudeState::Working, Duration::from_secs(30)),
+            make_session(ClaudeState::WaitingForApproval, Duration::from_secs(1)),
+        ];
+        assert!(has_stale_session(&sessions));
     }
 }

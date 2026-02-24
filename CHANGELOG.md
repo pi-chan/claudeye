@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-02-24
+
 ### Added
 
 - `--position` (`-p`) option to place overlay at any of 9 screen positions (default: `top-center`)
@@ -67,7 +69,8 @@
 - Project renamed from `ccmonitor` to `claudeye`
 - Overlay window height adjusts dynamically per session row count
 
-[Unreleased]: https://github.com/maedana/claudeye/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/maedana/claudeye/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/maedana/claudeye/compare/v0.2.1...v0.3.0
 [0.2.1]: https://github.com/maedana/claudeye/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/maedana/claudeye/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/maedana/claudeye/releases/tag/v0.1.0

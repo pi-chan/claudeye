@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+
+- `--center-on-stale` option to move overlay to screen center when a session needs attention
+  - Approval state triggers center immediately
+  - Idle state triggers center after 10 seconds
+
 ## [0.3.0] - 2026-02-24
 
 ### Added

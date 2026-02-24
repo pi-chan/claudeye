@@ -98,7 +98,7 @@ impl eframe::App for CcMonitorApp {
 
         let needs_fast_repaint = sessions.iter().any(|s| match s.state {
             ClaudeState::Working | ClaudeState::WaitingForApproval => true,
-            ClaudeState::Idle => s.state_changed_at.elapsed().as_secs_f32() < 14.0,
+            ClaudeState::Idle => s.state_changed_at.elapsed().as_secs_f32() < 10.0,
         });
         if needs_fast_repaint || self.compact {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
@@ -158,12 +158,9 @@ fn calc_stroke_width(state: &ClaudeState, elapsed_secs: f32, time: f64) -> f32 {
             1.0 + pulse * 2.0
         }
         ClaudeState::Idle => {
-            let grace = 4.0_f32;
-            if elapsed_secs < grace {
-                return 1.0;
-            }
-            let decay = (1.0 - (elapsed_secs - grace) / 10.0).clamp(0.0, 1.0);
-            let pulse = ((time * 3.0).sin() as f32 + 1.0) / 2.0;
+            let decay = (1.0 - elapsed_secs / 10.0).clamp(0.0, 1.0);
+            let speed = 3.0 + 13.0 * decay as f64; // 16.0 → 3.0
+            let pulse = ((time * speed).sin() as f32 + 1.0) / 2.0;
             1.0 + pulse * 2.0 * decay
         }
         ClaudeState::Working => 1.0,
@@ -267,24 +264,24 @@ mod tests {
     }
 
     #[test]
-    fn stroke_width_idle_no_pulse_during_grace_period() {
+    fn stroke_width_idle_starts_strong() {
+        let mut saw_peak = false;
         for t in 0..100 {
             let time = t as f64 * 0.1;
-            assert_eq!(calc_stroke_width(&ClaudeState::Idle, 2.0, time), 1.0);
+            let w = calc_stroke_width(&ClaudeState::Idle, 0.0, time);
+            assert!(w >= 1.0 && w <= 3.0, "got {w} at time {time}");
+            if w > 2.5 {
+                saw_peak = true;
+            }
         }
+        assert!(saw_peak, "should pulse strongly at start");
     }
 
     #[test]
-    fn stroke_width_idle_pulses_after_grace_period() {
-        let w_peak = calc_stroke_width(&ClaudeState::Idle, 5.0, std::f64::consts::FRAC_PI_2 / 3.0);
-        assert!(w_peak > 1.0, "should pulse after grace period, got {w_peak}");
-    }
-
-    #[test]
-    fn stroke_width_idle_stops_after_fade_out() {
+    fn stroke_width_idle_stops_after_10s() {
         for t in 0..100 {
             let time = t as f64 * 0.1;
-            assert_eq!(calc_stroke_width(&ClaudeState::Idle, 20.0, time), 1.0);
+            assert_eq!(calc_stroke_width(&ClaudeState::Idle, 10.0, time), 1.0);
         }
     }
 }

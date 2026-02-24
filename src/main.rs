@@ -96,11 +96,11 @@ impl eframe::App for CcMonitorApp {
             Err(_) => return, // poisoned mutex: polling thread panicked
         };
 
-        let has_working = sessions.iter().any(|s| matches!(
-            s.state,
-            ClaudeState::Working | ClaudeState::WaitingForApproval
-        ));
-        if has_working || self.compact {
+        let needs_fast_repaint = sessions.iter().any(|s| match s.state {
+            ClaudeState::Working | ClaudeState::WaitingForApproval => true,
+            ClaudeState::Idle => s.state_changed_at.elapsed().as_secs_f32() < 14.0,
+        });
+        if needs_fast_repaint || self.compact {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         } else {
             ctx.request_repaint_after(std::time::Duration::from_secs(REPAINT_INTERVAL_SECS));
@@ -151,6 +151,26 @@ impl eframe::App for CcMonitorApp {
     }
 }
 
+fn calc_stroke_width(state: &ClaudeState, elapsed_secs: f32, time: f64) -> f32 {
+    match state {
+        ClaudeState::WaitingForApproval => {
+            let amplitude = (2.0 - elapsed_secs * 0.1).clamp(1.0, 2.0);
+            let pulse = ((time * 4.0).sin() as f32 + 1.0) / 2.0;
+            1.0 + pulse * amplitude
+        }
+        ClaudeState::Idle => {
+            let grace = 4.0_f32;
+            if elapsed_secs < grace {
+                return 1.0;
+            }
+            let decay = (1.0 - (elapsed_secs - grace) / 10.0).clamp(0.0, 1.0);
+            let pulse = ((time * 3.0).sin() as f32 + 1.0) / 2.0;
+            1.0 + pulse * 2.0 * decay
+        }
+        ClaudeState::Working => 1.0,
+    }
+}
+
 fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
     let (state_color, label) = match &session.state {
         ClaudeState::Working => (Color32::from_rgb(80, 200, 80), "Running"),
@@ -158,12 +178,8 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
         ClaudeState::Idle => (Color32::from_gray(160), "Idle"),
     };
 
-    let stroke_width = if matches!(session.state, ClaudeState::WaitingForApproval) {
-        let pulse = ((time * 4.0).sin() + 1.0) / 2.0; // 0.0..=1.0
-        1.0 + pulse as f32 * 2.0 // 1.0..=3.0
-    } else {
-        1.0_f32
-    };
+    let elapsed = session.state_changed_at.elapsed().as_secs_f32();
+    let stroke_width = calc_stroke_width(&session.state, elapsed, time);
 
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
@@ -232,4 +248,60 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
         painter.line_segment([tail_tip, tail_top], egui::Stroke::new(stroke_width, state_color));
         painter.line_segment([tail_tip, tail_bot], egui::Stroke::new(stroke_width, state_color));
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stroke_width_working_is_always_one() {
+        assert_eq!(calc_stroke_width(&ClaudeState::Working, 0.0, 0.0), 1.0);
+        assert_eq!(calc_stroke_width(&ClaudeState::Working, 100.0, 5.0), 1.0);
+    }
+
+    #[test]
+    fn stroke_width_approval_pulses_between_1_and_3() {
+        let mut saw_above_one = false;
+        for t in 0..100 {
+            let time = t as f64 * 0.1;
+            let w = calc_stroke_width(&ClaudeState::WaitingForApproval, 0.0, time);
+            assert!(w >= 1.0 && w <= 3.0, "got {w} at time {time}");
+            if w > 1.5 {
+                saw_above_one = true;
+            }
+        }
+        assert!(saw_above_one, "pulse should exceed 1.5 at some point");
+    }
+
+    #[test]
+    fn stroke_width_approval_amplitude_decays_after_10s() {
+        for t in 0..100 {
+            let time = t as f64 * 0.1;
+            let w = calc_stroke_width(&ClaudeState::WaitingForApproval, 15.0, time);
+            assert!(w >= 1.0 && w <= 2.0, "got {w} at time {time}");
+        }
+    }
+
+    #[test]
+    fn stroke_width_idle_no_pulse_during_grace_period() {
+        for t in 0..100 {
+            let time = t as f64 * 0.1;
+            assert_eq!(calc_stroke_width(&ClaudeState::Idle, 2.0, time), 1.0);
+        }
+    }
+
+    #[test]
+    fn stroke_width_idle_pulses_after_grace_period() {
+        let w_peak = calc_stroke_width(&ClaudeState::Idle, 5.0, std::f64::consts::FRAC_PI_2 / 3.0);
+        assert!(w_peak > 1.0, "should pulse after grace period, got {w_peak}");
+    }
+
+    #[test]
+    fn stroke_width_idle_stops_after_fade_out() {
+        for t in 0..100 {
+            let time = t as f64 * 0.1;
+            assert_eq!(calc_stroke_width(&ClaudeState::Idle, 20.0, time), 1.0);
+        }
+    }
 }

@@ -59,6 +59,7 @@ pub fn run_picker() -> io::Result<()> {
                 pane,
                 state,
                 last_updated: std::time::Instant::now(),
+                state_changed_at: std::time::Instant::now(),
             }
         })
         .collect();
@@ -177,6 +178,7 @@ mod tests {
             },
             state: ClaudeState::Idle,
             last_updated: Instant::now(),
+            state_changed_at: Instant::now(),
         }
     }
 

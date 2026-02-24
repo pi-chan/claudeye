@@ -13,20 +13,30 @@ pub struct ClaudeSession {
     pub state: ClaudeState,
     #[allow(dead_code)]
     pub last_updated: Instant,
+    pub state_changed_at: Instant,
 }
 
 pub fn start_polling(sessions: Arc<Mutex<Vec<ClaudeSession>>>) {
     thread::spawn(move || loop {
         let panes = tmux::list_claude_panes();
+        let prev = sessions.lock().ok().map(|g| g.clone()).unwrap_or_default();
+
+        let now = Instant::now();
         let updated: Vec<ClaudeSession> = panes
             .into_iter()
             .map(|pane| {
                 let content = tmux::capture_pane(&pane.id);
                 let state = detect_state(&content);
+                let state_changed_at = prev
+                    .iter()
+                    .find(|s| s.pane.id == pane.id && s.state == state)
+                    .map(|s| s.state_changed_at)
+                    .unwrap_or(now);
                 ClaudeSession {
                     pane,
                     state,
-                    last_updated: Instant::now(),
+                    last_updated: now,
+                    state_changed_at,
                 }
             })
             .collect();

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix idle state misdetected as Approval when vim mode status lines (`-- INSERT --`, `[Model] Context: XX%`) appear below the prompt
+  - These footer lines caused `is_claude_prompt_line` to bail early, falling through to match stale WAITING_PATTERNS (e.g. `Proceed?`) in pane history.
+
 ## [0.2.1] - 2026-02-24
 
 ### Fixed

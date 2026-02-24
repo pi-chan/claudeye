@@ -158,6 +158,13 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
         ClaudeState::Idle => (Color32::from_gray(160), "Idle"),
     };
 
+    let stroke_width = if matches!(session.state, ClaudeState::WaitingForApproval) {
+        let pulse = ((time * 4.0).sin() + 1.0) / 2.0; // 0.0..=1.0
+        1.0 + pulse as f32 * 2.0 // 1.0..=3.0
+    } else {
+        1.0_f32
+    };
+
     ui.horizontal(|ui| {
         ui.spacing_mut().item_spacing.x = 2.0;
         // Mini robot art or spinner (fixed-width column, center-aligned)
@@ -195,7 +202,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
         let bubble_fill = Color32::from_rgba_unmultiplied(30, 30, 45, 220);
         let inner = egui::Frame::none()
             .fill(bubble_fill)
-            .stroke(egui::Stroke::new(1.0, state_color))
+            .stroke(egui::Stroke::new(stroke_width, state_color))
             .rounding(egui::Rounding::same(5.0))
             .inner_margin(egui::Margin::symmetric(6.0, 2.0))
             .show(ui, |ui: &mut Ui| {
@@ -222,7 +229,7 @@ fn render_session_row(ui: &mut Ui, session: &ClaudeSession, time: f64) {
             bubble_fill,
             egui::Stroke::NONE,
         ));
-        painter.line_segment([tail_tip, tail_top], egui::Stroke::new(1.0, state_color));
-        painter.line_segment([tail_tip, tail_bot], egui::Stroke::new(1.0, state_color));
+        painter.line_segment([tail_tip, tail_top], egui::Stroke::new(stroke_width, state_color));
+        painter.line_segment([tail_tip, tail_bot], egui::Stroke::new(stroke_width, state_color));
     });
 }

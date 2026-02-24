@@ -2,6 +2,19 @@
 
 ## [Unreleased]
 
+### Added
+
+- `--position` (`-p`) option to place overlay at any of 9 screen positions (default: `top-center`)
+- Pulse animation on speech bubble border for WaitingForApproval state (stroke width pulses 1.0–3.0)
+- Elapsed time display per session in speech bubble (e.g. `[Running] 33s`)
+
+### Changed
+
+- WaitingForApproval pulse now constant full intensity instead of gradually decaying
+- Robot head uses fixed state color per state instead of blinking
+- Removed Idle pulse animation (stroke width is now constant)
+- Removed unused `last_updated` field from `ClaudeSession`
+
 ### Fixed
 
 - Fix idle state misdetected as Approval when vim mode status lines (`-- INSERT --`, `[Model] Context: XX%`) appear below the prompt

@@ -16,6 +16,10 @@ struct Args {
     #[arg(long)]
     compact: bool,
 
+    /// Overlay window position on screen
+    #[arg(long, short, default_value = "top-center", value_enum)]
+    position: Position,
+
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -26,22 +30,61 @@ enum Commands {
     Picker,
 }
 
+#[derive(Clone, Copy, Default, clap::ValueEnum)]
+enum Position {
+    TopLeft,
+    #[default]
+    TopCenter,
+    TopRight,
+    MiddleLeft,
+    MiddleCenter,
+    MiddleRight,
+    BottomLeft,
+    BottomCenter,
+    BottomRight,
+}
+
+impl Position {
+    fn compute(self, monitor: Vec2, window: Vec2) -> egui::Pos2 {
+        let x = match self {
+            Position::TopLeft | Position::MiddleLeft | Position::BottomLeft => MARGIN,
+            Position::TopCenter | Position::MiddleCenter | Position::BottomCenter => {
+                (monitor.x - window.x) / 2.0
+            }
+            Position::TopRight | Position::MiddleRight | Position::BottomRight => {
+                monitor.x - window.x - MARGIN
+            }
+        };
+        let y = match self {
+            Position::TopLeft | Position::TopCenter | Position::TopRight => MARGIN,
+            Position::MiddleLeft | Position::MiddleCenter | Position::MiddleRight => {
+                (monitor.y - window.y) / 2.0
+            }
+            Position::BottomLeft | Position::BottomCenter | Position::BottomRight => {
+                monitor.y - window.y - MARGIN
+            }
+        };
+        egui::pos2(x, y)
+    }
+}
+
 const REPAINT_INTERVAL_SECS: u64 = 2;
 const WINDOW_WIDTH: f32 = 300.0;
 const WINDOW_EMPTY_HEIGHT: f32 = 40.0;
 const ROW_HEIGHT: f32 = 22.0;
 const WINDOW_PADDING: f32 = 8.0;
+const MARGIN: f32 = 2.0;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
     match args.command {
         Some(Commands::Picker) => picker::run_picker()?,
-        None => run_gui(args.compact)?,
+        None => run_gui(args.compact, args.position)?,
     }
     Ok(())
 }
 
-fn run_gui(compact: bool) -> eframe::Result<()> {
+fn run_gui(compact: bool, position: Position) -> eframe::Result<()> {
     let sessions: Arc<Mutex<Vec<ClaudeSession>>> = Arc::new(Mutex::new(vec![]));
     start_polling(Arc::clone(&sessions));
 
@@ -58,16 +101,14 @@ fn run_gui(compact: bool) -> eframe::Result<()> {
     eframe::run_native(
         "claudeye",
         options,
-        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, positioned: false, compact }))),
+        Box::new(|_cc| Ok(Box::new(CcMonitorApp { sessions, compact, position }))),
     )
 }
 
-const WINDOW_TOP_MARGIN: f32 = 2.0;
-
 struct CcMonitorApp {
     sessions: Arc<Mutex<Vec<ClaudeSession>>>,
-    positioned: bool,
     compact: bool,
+    position: Position,
 }
 
 impl eframe::App for CcMonitorApp {
@@ -82,14 +123,6 @@ impl eframe::App for CcMonitorApp {
 
         ctx.send_viewport_cmd(egui::ViewportCommand::WindowLevel(egui::WindowLevel::AlwaysOnTop));
         ctx.send_viewport_cmd(egui::ViewportCommand::MousePassthrough(true));
-
-        if !self.positioned
-            && let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size)
-        {
-            let x = (monitor_size.x - WINDOW_WIDTH) / 2.0;
-            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(egui::pos2(x, WINDOW_TOP_MARGIN)));
-            self.positioned = true;
-        }
 
         let sessions = match self.sessions.lock() {
             Ok(guard) => guard.clone(),
@@ -128,6 +161,11 @@ impl eframe::App for CcMonitorApp {
             WINDOW_WIDTH,
             window_height,
         )));
+
+        if let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size) {
+            let pos = self.position.compute(monitor_size, Vec2::new(WINDOW_WIDTH, window_height));
+            ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(pos));
+        }
 
         egui::CentralPanel::default()
             .frame(
@@ -245,6 +283,33 @@ mod tests {
     fn stroke_width_idle_is_always_one() {
         assert_eq!(calc_stroke_width(&ClaudeState::Idle, 0.0), 1.0);
         assert_eq!(calc_stroke_width(&ClaudeState::Idle, 5.0), 1.0);
+    }
+
+    #[test]
+    fn position_top_center_default() {
+        let monitor = Vec2::new(1920.0, 1080.0);
+        let window = Vec2::new(300.0, 40.0);
+        let pos = Position::TopCenter.compute(monitor, window);
+        assert_eq!(pos.x, (1920.0 - 300.0) / 2.0);
+        assert_eq!(pos.y, MARGIN);
+    }
+
+    #[test]
+    fn position_bottom_right() {
+        let monitor = Vec2::new(1920.0, 1080.0);
+        let window = Vec2::new(300.0, 40.0);
+        let pos = Position::BottomRight.compute(monitor, window);
+        assert_eq!(pos.x, 1920.0 - 300.0 - MARGIN);
+        assert_eq!(pos.y, 1080.0 - 40.0 - MARGIN);
+    }
+
+    #[test]
+    fn position_middle_center() {
+        let monitor = Vec2::new(1920.0, 1080.0);
+        let window = Vec2::new(300.0, 40.0);
+        let pos = Position::MiddleCenter.compute(monitor, window);
+        assert_eq!(pos.x, (1920.0 - 300.0) / 2.0);
+        assert_eq!(pos.y, (1080.0 - 40.0) / 2.0);
     }
 
     #[test]

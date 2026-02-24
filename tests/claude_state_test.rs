@@ -385,3 +385,19 @@ fn waiting_with_no_as_last_selected_option() {
     let content = "Do you want to proceed?\n  Yes\n❯ No";
     assert_eq!(detect_state(content), ClaudeState::WaitingForApproval);
 }
+
+#[test]
+fn idle_with_vim_mode_and_stale_waiting_pattern_in_history() {
+    // When vim mode footer lines (-- INSERT --, [Model] Context: XX%) appear below the prompt
+    // and a stale WAITING_PATTERN like "Proceed?" exists in pane history,
+    // the state should be Idle, not misdetected as WaitingForApproval.
+    let content = "\
+❯ Proceed?\n\
+  ⎿  Interrupted · What should Claude do instead?\n\
+\n\
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\
+❯ \n\
+──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────\n\
+  [Opus 4.6] Context: 0%";
+    assert_eq!(detect_state(content), ClaudeState::Idle);
+}

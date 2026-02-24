@@ -189,10 +189,17 @@ fn is_claude_prompt_line(lines: &[&str]) -> bool {
             continue;
         }
 
+        // Skip status bar lines that appear below the ❯ prompt.
+        // These are not user content and should be ignored when searching
+        // upward for the prompt line.
         if trimmed.contains("? for shortcuts")
             || trimmed.contains("ctrl+")
             || trimmed.contains("shift+")
             || file_changes.is_match(trimmed)
+            // Vim mode indicators: "-- INSERT --", "-- NORMAL --", etc.
+            || trimmed.starts_with("-- ") && trimmed.ends_with(" --")
+            // Model/context display: "[Opus 4.6] Context: 0%", "[Sonnet 4.6] Context: 18%"
+            || trimmed.contains("] Context:")
         {
             continue;
         }

@@ -6,7 +6,7 @@ A transparent always-on-top overlay that monitors Claude Code sessions running i
 
 claudeye periodically polls all tmux panes, finds those running the `claude` command, and displays their status in a small floating window at the top center of your screen. The window is click-through, so it never interferes with your workflow.
 
-Each session is shown as a mini Clawd (the Claude robot mascot) with a color-coded speech bubble indicating its current state:
+Each session is shown as a mini Clawd (the Claude robot mascot) with a color-coded speech bubble indicating its current state and elapsed time:
 
 | Label       | Color  | Meaning                                |
 |-------------|--------|----------------------------------------|
@@ -30,23 +30,28 @@ cargo install claudeye
 ## Usage
 
 ```sh
-claudeye [--compact]
+claudeye [--compact] [--position <POSITION>]
 claudeye picker
 ```
 
 ### Overlay mode
 
 ```sh
-# Run with default settings (show all sessions)
+# Run with default settings (show all sessions at top center)
 claudeye
 
 # Run in compact mode (cycle through one session at a time, one per second)
 claudeye --compact
+
+# Position the overlay at a specific screen location
+claudeye --position bottom-right
+claudeye -p top-left
 ```
 
 | Option | Description |
 |--------|-------------|
 | `--compact` | Show one session at a time, cycling every second |
+| `--position`, `-p` | Window position on screen (default: `top-center`). Values: `top-left`, `top-center`, `top-right`, `middle-left`, `middle-center`, `middle-right`, `bottom-left`, `bottom-center`, `bottom-right` |
 
 ![Overlay mode][1]
 
@@ -80,7 +85,8 @@ Sessions beyond the 9th are accessible via `j`/`k` navigation.
 4. The egui overlay window updates to reflect the latest state of each session.
 
 The overlay window is:
-- Positioned at the top center of your primary monitor
+- Positioned at the top center of your primary monitor by default (configurable with `--position`)
+- Dynamically sized to fit session content
 - Always on top of other windows
 - Click-through (mouse events pass through to windows below)
 - Fully transparent background
